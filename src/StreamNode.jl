@@ -1,44 +1,27 @@
-using DataFrames
+using Parameters
+using ModelParameters
 
-abstract type NetworkNode end
 
-@def network_node begin
-    node_id::String
-    area::Float64  # area in km^2
-end
-
-mutable struct StreamNode <: NetworkNode
+@with_kw mutable struct StreamNode{A} <: NetworkNode{A}
     @network_node
 
-    d::Float64
-    d2::Float64
-    e::Float64
-    f::Float64
-    a::Float64
-    b::Float64
-    storage_coef::Float64
-    alpha::Float64
+    # https://wiki.ewater.org.au/display/SD41/IHACRES-CMD+-+SRG
+    d::A = Param(200.0, bounds=(10.0, 550.0))  # flow threshold
+    d2::A = Param(2.0, bounds=(10.0, 500.0))   # flow threshold2
+    e::A = Param(1.0, bounds=(0.1, 1.5))  # temperature to PET conversion factor
+    f::A = Param(0.8, bounds=(0.01, 3.0))  # plant stress threshold factor (multiplicative factor of d)
+    a::A = Param(200.0, bounds=(0.1, 100.0))
+    b::A = Param(200.0, bounds=(0.001, 1.0))
+    storage_coef::A = Param(2.9, bounds=(0.2, 10.0))
+    alpha::A = Param(0.1, bounds=(1e-5, 1 - 1/10^9))
 
-    storage::Array{Float64}
-    quickflow::Array{Float64}
-    slowflow::Array{Float64}
-    outflow::Array{Float64}
-    effective_rainfall::Array{Float64}
-    et::Array{Float64}
-    inflow::Array{Float64}
-end
-
-
-function get_climate_data(node::NetworkNode, climate_data::DataFrame)
-    tgt::String = node.node_id
-    rain_prefix = "pr_"
-    et_prefix = "wvap_"
-
-    rain = climate_data[Symbol(rain_prefix*tgt)]
-    et = climate_data[Symbol(et_prefix*tgt)]
-
-    return rain, et
-
+    storage::Array{Float64} = [100.0]
+    quickflow::Array{Float64} = [100.0]
+    slowflow::Array{Float64} = [100.0]
+    outflow::Array{Float64} = []
+    effective_rainfall::Array{Float64} = []
+    et::Array{Float64} = []
+    inflow::Array{Float64} = []
 end
 
 
@@ -69,7 +52,7 @@ Returns
 ----------
 float, outflow from node
 """
-function run_node(s_node::StreamNode, 
+function run_node!(s_node::StreamNode, 
                   rain::Float64, 
                   evap::Float64, 
                   inflow::Float64, 
@@ -158,4 +141,16 @@ function run_node(s_node::StreamNode,
     update_state(s_node, cmd, e_rainfall, et, quick_store, slow_store, outflow)
 
     return outflow
+end
+
+
+function reset!(s_node::StreamNode)
+    s_node.storage = [s_node.storage[1]]
+
+    s_node.quickflow = [s_node.quickflow[1]]
+    s_node.slowflow = [s_node.slowflow[1]]
+    s_node.outflow = []
+    s_node.effective_rainfall = []
+    s_node.et = []
+    s_node.inflow = []
 end
