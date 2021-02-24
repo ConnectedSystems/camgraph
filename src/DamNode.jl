@@ -56,8 +56,6 @@ end
     discharge::Array{Float64} = []
     outflow::Array{Float64} = []
 
-    # DamNode(node_id::Int64, area::Real) = DamNode(node_id=string(node_id), area=area)
-    
 end
 
 
