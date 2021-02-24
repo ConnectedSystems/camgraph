@@ -1,4 +1,6 @@
 using DataFrames
+using Infiltrator
+
 
 mutable struct Climate
     climate_data::DataFrame
@@ -25,6 +27,10 @@ function climate_values(node::NetworkNode, climate::Climate, timestep::Union{Not
     et_col = filter(x -> occursin(node_id, string(x))
                       & occursin(climate.et_id, string(x)),
                       propertynames(data))
+
+    if isempty(rain_col) | isempty(et_col)
+        return (missing, missing)
+    end
 
     if isnothing(timestep)
         return select(data, vcat(rain_col, et_col))

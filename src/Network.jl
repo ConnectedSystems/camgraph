@@ -46,8 +46,9 @@ end
 """Create a node if needed"""
 function create_node(mg, node_id, details, nid)
     match = collect(filter_vertices(mg, :name, node_id))
-    if length(match) == 0
+    if isempty(match)
         node_type = details["node_type"]
+
         if node_type == "StreamNode"
             n = StreamNode(node_id=node_id, area=details["area"])
         elseif node_type == "DamNode"
@@ -105,7 +106,7 @@ function create_network(name::String, network::Dict)
         in_id = nid
         if !isnothing(inlets)
             for inlet in inlets
-                in_id, nid = create_node(mg, string(inlet), details, nid)
+                in_id, nid = create_node(mg, string(inlet), network[inlet], nid)
                 # @info "Inlet: Creating link from $(inlet) to $(node_id) | $(in_id) -> $(this_id)"
                 add_edge!(g, in_id, this_id)
             end
@@ -115,7 +116,7 @@ function create_network(name::String, network::Dict)
         out_id = in_id
         if !isnothing(outlets)
             for outlet in outlets
-                out_id, nid = create_node(mg, string(outlet), details, nid)
+                out_id, nid = create_node(mg, string(outlet), network[outlet], nid)
                 # @info "Outlet: Creating link from $(node_id) to $(outlet) | $(this_id) -> $(out_id)"
                 add_edge!(g, this_id, out_id)
             end

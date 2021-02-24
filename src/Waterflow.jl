@@ -1,6 +1,7 @@
 module Waterflow
 
 using LightGraphs, MetaGraphs, Distributed, DataFrames
+using Infiltrator
 
 
 # Can't use string, DLL location has to be a const
@@ -33,8 +34,13 @@ include("StreamNode.jl")
 include("DamNode.jl")
 include("Climate.jl")
 
+"""Run a model attached to a node.
 
-function run_node!(mg::MetaGraph, g::AbstractGraph, node_id::Int, climate::Climate, timestep::Int)
+water_order: Volume of water to be extracted (in ML/timestep)
+exchange: Volume of flux (in ML/timestep), where negative values are losses to the groundwater system.
+"""
+function run_node!(mg::MetaGraph, g::AbstractGraph, node_id::Int, climate::Climate, timestep::Int; 
+                   water_order=nothing, exchange=nothing)
 
     curr_node = get_prop(mg, node_id, :node)
     if checkbounds(Bool, curr_node.outflow, timestep)
@@ -58,30 +64,36 @@ function run_node!(mg::MetaGraph, g::AbstractGraph, node_id::Int, climate::Clima
         end
     end
 
-    dst_name = get_prop(mg, node_id, :name)
-    curr_node = get_prop(mg, node_id, :node)
+    gauge_id = get_prop(mg, node_id, :name)
+    rain, et = climate_values(curr_node, climate, timestep)
+    if ismissing(rain) | ismissing(et)
+        @warn "No climate data found for node $(node_id) ($(gauge_id)) using column markers $(climate.rainfall_id) and $(climate.et_id)"
+        return 0.0
+    end
 
-    rain, et = try
-                    climate_values(curr_node, climate, timestep)
-                catch e
-                    if e isa BoundsError
-                        # Temporary hack - if no relevant data is found, return 0
-                        return 0.0
-                    else
-                        rethrow()
-                    end
-                end
+    wo = 0.0
+    if !isnothing(water_order)
+        release_col = filter(x -> occursin(gauge_id, string(x))
+                                  & occursin("releases", string(x)),
+                                  propertynames(water_order))
+        
+        wo = checkbounds(Bool, water_order.Date, timestep) ? water_order[timestep, release_col][1] : 0.0
+    end
+
+    ex = 0.0
+    if !isnothing(exchange)
+        exchange_col = filter(x -> occursin(gauge_id, string(x))
+                                  & occursin("exchange", string(x)),
+                                  propertynames(exchange))
+        ex = checkbounds(Bool, exchange.Date, timestep) ? exchange[timestep, exchange_col][1] : 0.0
+    end
 
     # Calculate outflow for this node
-    # node_type = typeof(curr_node)
+    func = get_prop(mg, node_id, :nfunc)
     if curr_node isa StreamNode
-        outflow = get_prop(mg, node_id, :nfunc)(curr_node, rain, et, inflow, 0.0)
-        # outflow = Waterflow.run_node!(curr_node, rain, et, inflow, 0.0)
+        outflow = func(curr_node, rain, et, inflow, 0.0)
     elseif curr_node isa DamNode
-        water_order = float(rand((0:1000)))  # need to accept water order as a parameter
-        exchange = 0.0
-        outflow = get_prop(mg, node_id, :nfunc)(curr_node, rain, et, inflow, water_order, exchange)
-        # outflow = Waterflow.run_node!(curr_node, rain, et, inflow, water_order, exchange)
+        outflow = func(curr_node, rain, et, inflow, wo, ex)
     else
         throw(ArgumentError("Unknown node type!"))
     end
