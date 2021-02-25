@@ -1,4 +1,4 @@
-using Parameters
+using ModelParameters
 
 
 function c_dam_level(volume)
@@ -26,7 +26,7 @@ function c_dam_outflow(discharge, irrigation_extraction)
 end
 
 
-@with_kw mutable struct DamNode{A} <: NetworkNode{A}
+Base.@kwdef mutable struct DamNode{A} <: NetworkNode{A}
     @network_node
 
     max_storage::Float64
@@ -103,6 +103,8 @@ function update_state(node::DamNode, storage, rainfall, et, area, discharge, out
     push!(node.dam_area, area)
     push!(node.discharge, discharge)
     push!(node.outflow, outflow)
+
+    return nothing
 end
 
 
@@ -126,7 +128,7 @@ Returns
 -------
 float, volume of water stored in dam
 """
-function update_volume(volume, node_inflow, gamma, rain, evap, area, extractions, discharge, max_store)
+function update_volume(volume, node_inflow, gamma, rain, evap, area, extractions, discharge, max_store)::Float64
     
     vol = volume + (node_inflow + gamma) + (rain - evap) * area - extractions - discharge
 
