@@ -91,7 +91,7 @@ function run_node!(s_node::StreamNode,
                   inflow::Float64,
                   ext::Float64,
                   gw_exchange::Float64=0.0,
-                  loss::Float64=0.0)::Float64
+                  loss::Float64=0.0)::Tuple{Float64, Float64}
     arr_len = length(s_node.storage)
     current_store = s_node.storage[arr_len]
 
@@ -166,7 +166,7 @@ function run_node!(s_node::StreamNode,
 
     update_state(s_node, cmd, e_rainfall, et, quick_store, slow_store, outflow, level)
 
-    return outflow
+    return outflow, level
 end
 
 
