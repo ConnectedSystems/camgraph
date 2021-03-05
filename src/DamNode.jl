@@ -166,5 +166,19 @@ function run_node!(node::DamNode,
 
     update_state(node, updated_store, rain, et, dam_area, discharge, outflow)
 
-    return outflow
+    return outflow, level(node)
+end
+
+
+function reset!(node::DamNode)::Nothing
+    node.storage = [node.storage[1]]
+    node.effective_rainfall = []
+    node.et = []
+    node.level = []
+    node.dam_area = []
+
+    node.discharge = []
+    node.outflow = []
+
+    return nothing
 end
