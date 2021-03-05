@@ -45,7 +45,7 @@ function run_node!(mg::MetaGraph, g::AbstractGraph, node_id::Int, climate::Clima
     curr_node = get_prop(mg, node_id, :node)
     if checkbounds(Bool, curr_node.outflow, timestep)
         # already ran for this time step so no need to recurse further
-        return curr_node.outflow[timestep]
+        return curr_node.outflow[timestep], curr_node.level[timestep]
     end
 
     outflow = 0.0
@@ -60,7 +60,8 @@ function run_node!(mg::MetaGraph, g::AbstractGraph, node_id::Int, climate::Clima
         for i in ins
             src_name = get_prop(mg, i, :name)
             # Get inflow from previous node
-            inflow += run_node!(mg, g, i, climate, timestep)
+            upstream_flow, upstream_level = run_node!(mg, g, i, climate, timestep)
+            inflow += upstream_flow
         end
     end
 
@@ -75,30 +76,30 @@ function run_node!(mg::MetaGraph, g::AbstractGraph, node_id::Int, climate::Clima
     if !isnothing(water_order)
         release_col = filter(x -> occursin(gauge_id, string(x))
                                   & occursin("releases", string(x)),
-                                  propertynames(water_order))
+                                  names(water_order))
         
         wo = checkbounds(Bool, water_order.Date, timestep) ? water_order[timestep, release_col][1] : 0.0
     end
 
     ex = 0.0
     if !isnothing(exchange)
-        exchange_col = filter(x -> occursin(gauge_id, string(x))
-                                  & occursin("exchange", string(x)),
-                                  propertynames(exchange))
+        exchange_col = filter(x -> occursin(gauge_id, x)
+                                  & occursin("exchange", x),
+                                  names(exchange))
         ex = checkbounds(Bool, exchange.Date, timestep) ? exchange[timestep, exchange_col][1] : 0.0
     end
 
     # Calculate outflow for this node
     func = get_prop(mg, node_id, :nfunc)
     if curr_node isa StreamNode
-        outflow = func(curr_node, rain, et, inflow, 0.0)
+        outflow, level = func(curr_node, rain, et, inflow, 0.0)
     elseif curr_node isa DamNode
-        outflow = func(curr_node, rain, et, inflow, wo, ex)
+        outflow, level = func(curr_node, rain, et, inflow, wo, ex)
     else
         throw(ArgumentError("Unknown node type!"))
     end
 
-    return outflow
+    return outflow, level
 end
 
 include("Network.jl")
