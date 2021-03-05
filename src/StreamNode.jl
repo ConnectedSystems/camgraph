@@ -161,7 +161,7 @@ function run_node!(s_node::StreamNode,
 
     level::Float64 = @ccall ihacres.calc_ft_level(
         outflow::Cdouble,
-        s_node.level_params::Array{Cdouble}
+        s_node.level_params::Ptr{Cdouble}
     )::Cdouble
 
     update_state(s_node, cmd, e_rainfall, et, quick_store, slow_store, outflow, level)
