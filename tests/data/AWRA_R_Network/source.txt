@@ -1,0 +1,3 @@
+River network references:
+https://www.mssanz.org.au/modsim2011/I9/lerat.pdf
+https://www.mssanz.org.au/modsim2013/L4/lerat.pdf
