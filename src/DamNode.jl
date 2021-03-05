@@ -182,3 +182,11 @@ function reset!(node::DamNode)::Nothing
 
     return nothing
 end
+
+
+"""
+"""
+function update_params!(node::DamNode, params::Array{Float64, 1})::Nothing
+    node.storage_coef = params[1]
+    return nothing
+end

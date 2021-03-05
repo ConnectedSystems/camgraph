@@ -108,6 +108,7 @@ include("Network.jl")
 export @def
 export ihacres, StreamNode, DamNode, Climate
 export find_inlets_and_outlets, create_network, create_node
-export climate_values, run_node!, reset!, sim_length
+export update_params!, run_node!, reset!, sim_length
+export climate_values
 
 end  # end module
