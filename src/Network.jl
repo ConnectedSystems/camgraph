@@ -1,4 +1,5 @@
 using LightGraphs, MetaGraphs
+using ModelParameters
 using Waterflow
 
 
@@ -50,9 +51,9 @@ function create_node(mg, node_id, details, nid)
         node_type = details["node_type"]
 
         if node_type == "StreamNode"
-            n = StreamNode(node_id=node_id, area=details["area"])
+            n = StreamNode{Param}(; node_id=node_id, area=details["area"])
         elseif node_type == "DamNode"
-            n = DamNode(node_id=node_id, area=details["area"], max_storage=details["max_storage"])
+            n = DamNode{Param}(node_id=node_id, area=details["area"], max_storage=details["max_storage"])
         else
             throw(ArgumentError("Unsupported node type: $(node_type)"))
         end
